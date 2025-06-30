@@ -343,8 +343,13 @@
             gameState.playerScores = {};
             studentNameInput.value = gameState.lastStudentName; // Restore last name
             studentGameCodeInput.value = gameState.lastStudentGameCode; // Restore last game code
-            getAvailableTeams(); // Populate teams based on restored code
-            studentTeamSelect.value = gameState.lastStudentTeamName; // Restore last selected team
+            
+            // Initialize team select dropdown
+            studentTeamSelect.innerHTML = '<option value="">-- Chọn đội --</option>';
+            if (gameState.lastStudentGameCode && gameState.lastStudentGameCode === gameState.gameId) {
+                getAvailableTeams();
+                studentTeamSelect.value = gameState.lastStudentTeamName; // Restore last selected team
+            }
 
             if (!gameState.lastStudentName) { // If no previous student, clear inputs
                 studentNameInput.value = '';
@@ -357,10 +362,10 @@
         // Simulate getting available teams for student
         function getAvailableTeams() {
             const gameCode = studentGameCodeInput.value.trim().toUpperCase();
-            // In a real multi-player game, this would be an API call to the server
-            // For this single-player simulation, we'll just check if the game ID matches the teacher's generated one
-            if (gameCode === gameState.gameId && gameState.teams.length > 0) {
-                gameState.availableTeamsForStudent = gameState.teams.map(team => team.name);
+            if (gameCode === gameState.gameId) {
+                // Get team names from teacher's setup inputs
+                const teamInputs = document.querySelectorAll('#teamNamesContainer input[type="text"]');
+                gameState.availableTeamsForStudent = Array.from(teamInputs).map(input => input.value.trim() || `Đội ${input.id.replace('teamName','')}`);
                 populateStudentTeamSelect();
             } else {
                 gameState.availableTeamsForStudent = [];
@@ -405,10 +410,9 @@
 
             // For single player, create one "team" with the player's name and selected team
             // We'll assign the student to the chosen team and track their score within that team
-            const chosenTeam = gameState.teams.find(team => team.name === selectedTeamName);
-            if (chosenTeam) {
+            if (gameState.availableTeamsForStudent.includes(selectedTeamName)) {
                 // Reset teams to only include the chosen team for single player display
-                gameState.teams = [{ name: chosenTeam.name, score: 0 }]; // Reset score for new round
+                gameState.teams = [{ name: selectedTeamName, score: 0 }]; // Reset score for new round
                 gameState.score = { [chosenTeam.name]: 0 }; // Reset score for the team
                 // Initialize playerScores for the chosen team and player
                 gameState.playerScores = { [chosenTeam.name]: { [name]: 0 } };
