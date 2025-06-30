@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luyện Gõ Phím - Thi Đấu Đội</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Gochi+Hand&family=Patrick+Hand&display=swap');
+        
+        :root {
+            --team1-color: #FF9AA2;
+            --team2-color: #FFB7B2; 
+            --team3-color: #FFDAC1;
+            --team4-color: #E2F0CB;
+        }
+
+        * {
+            font-family: 'Patrick Hand', cursive;
+        }
+
+        body {
+            background-color: #f0f9ff;
+            background-image: url('https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/9f6a08c9-a973-4973-9cc4-357e897d5f95.png');
+            background-size: cover;
+            background-attachment: fixed;
+        }
+
+        .title {
+            font-family: 'Gochi Hand', cursive;
+            color: #3b82f6;
+            text-shadow: 2px 2px 0px #fff;
+        }
+
+        .key {
+            transition: all 0.1s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        .key.active {
+            transform: translateY(4px);
+            box-shadow: 0 1px 2px -1px rgba(0, 0, 0, 0.2);
+            filter: brightness(0.9);
+        }
+
+        .correct {
+            background-color: #86efac !important;
+        }
+
+        .wrong {
+            background-color: #fca5a5 !important;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+
+        .team-1 {
+            background-color: var(--team1-color);
+        }
+
+        .team-2 {
+            background-color: var(--team2-color);
+        }
+
+        .team-3 {
+            background-color: var(--team3-color);
+        }
+
+        .team-4 {
+            background-color: var(--team4-color);
+        }
+
+        .celebrate {
+            animation: celebrate 2s infinite;
+        }
+
+        @keyframes celebrate {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+
+        /* Effect for correct key press */
+        .correct-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-start p-4">
+    <div class="absolute inset-0 bg-white bg-opacity-70 z-0"></div>
+    
+    <div class="relative z-10 w-full max-w-4xl">
+        <!-- Mode Selection -->
+        <div id="modeSelection" class="text-center mb-8 p-6 bg-white rounded-xl shadow-lg">
+            <h2 class="text-3xl font-bold mb-6">Chọn chế độ</h2>
+            <div class="flex justify-center gap-4">
+                <button onclick="showTeacherMode()" class="px-6 py-3 bg-blue-500 text-white rounded-lg text-xl hover:bg-blue-600">
+                    Giáo viên
+                </button>
+                <button onclick="showStudentMode()" class="px-6 py-3 bg-green-500 text-white rounded-lg text-xl hover:bg-green-600">
+                    Học sinh
+                </button>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <header class="text-center mb-8 hidden" id="gameHeader">
+            <h1 class="title text-5xl md:text-6xl mb-2">Luyện Gõ Phím</h1>
+            <p class="text-xl">Thi đấu đồng đội - Ai nhanh hơn?</p>
+        </header>
+
+        <!-- Game Area -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8 relative overflow-hidden">
+            <!-- Team Selection -->
+            <div id="teamSetup" class="mb-8">
+                <h2 class="text-2xl font-bold mb-4 text-center">Thiết lập đội chơi</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="team-option p-4 rounded-lg">
+                        <label class="block text-lg font-semibold mb-2">Số đội chơi</label>
+                        <div class="flex justify-center gap-2">
+                            <button onclick="setTeamCount(2)" class="px-4 py-2 bg-blue-100 rounded-lg hover:bg-blue-200">2 Đội</button>
+                            <button onclick="setTeamCount(3)" class="px-4 py-2 bg-blue-100 rounded-lg hover:bg-blue-200">3 Đội</button>
+                            <button onclick="setTeamCount(4)" class="px-4 py-2 bg-blue-100 rounded-lg hover:bg-blue-200">4 Đội</button>
+                        </div>
+                    </div>
+                    <div class="time-option p-4 rounded-lg">
+                        <label class="block text-lg font-semibold mb-2">Thời gian (giây)</label>
+                        <select id="gameTime" class="w-full p-2 border rounded-lg">
+                            <option value="30">30 giây</option>
+                            <option value="60" selected>60 giây</option>
+                            <option value="90">90 giây</option>
+                            <option value="120">120 giây</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="teamNamesContainer" class="hidden grid-cols-1 md:grid-cols-2 gap-4 mb-6"></div>
+
+                <div class="text-center">
+                    <div id="gameCodeDisplay" class="mb-4 hidden">
+                        <p class="font-bold">Mã trò chơi:</p>
+                        <p id="gameCodeValue" class="text-2xl font-mono bg-gray-100 p-2 rounded"></p>
+                        <p class="text-sm text-gray-600">Học sinh nhập mã này để tham gia</p>
+                    </div>
+                    <button id="startGameBtn" onclick="startGame()" 
+                        class="px-6 py-3 bg-green-500 text-white rounded-lg text-xl hover:bg-green-600 hidden">
+                        BẮT ĐẦU CUỘC CHIẾN!
+                    </button>
+                </div>
+            </div>
+
+            <!-- Game Screen -->
+            <div id="studentSetup" class="hidden bg-white rounded-xl shadow-lg p-6 mb-8">
+                <h2 class="text-2xl font-bold mb-4 text-center">Tham gia trò chơi</h2>
+                <div class="mb-4">
+                    <label class="block text-lg font-semibold mb-2">Mã trò chơi</label>
+                    <input type="text" id="gameCode" class="w-full p-3 border rounded-lg text-center text-xl" 
+                           placeholder="Nhập mã từ giáo viên">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-lg font-semibold mb-2">Tên của bạn</label>
+                    <input type="text" id="studentName" class="w-full p-3 border rounded-lg text-center text-xl" 
+                           placeholder="Nhập tên của bạn">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-lg font-semibold mb-2">Chọn đội</label>
+                    <select id="teamSelect" class="w-full p-3 border rounded-lg text-center text-xl">
+                        <option value="">-- Chọn đội --</option>
+                    </select>
+                </div>
+                <button onclick="joinGame()" class="w-full py-3 bg-green-500 text-white rounded-lg text-xl hover:bg-green-600">
+                    Tham gia
+                </button>
+            </div>
+
+            <div id="gameScreen" class="hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <div id="timer" class="text-2xl font-bold">1:00</div>
+                    <button onclick="endGame()" class="px-4 py-1 bg-red-500 text-white rounded-lg">Kết thúc</button>
+                </div>
+
+                <!-- Teams progress -->
+                <div id="teamsProgress" class="mb-6 grid grid-cols-1 gap-2"></div>
+
+                <!-- Current team playing -->
+                <div id="currentTeamDisplay" class="text-center py-2 rounded-lg mb-4 text-xl font-bold"></div>
+
+                <!-- Typing words -->
+                <div id="wordDisplay" class="text-center text-3xl font-bold mb-8 py-4 px-2 bg-gray-100 rounded-lg">
+                    Nhấn phím bất kỳ để bắt đầu
+                </div>
+
+                <!-- Keyboard -->
+                <div id="keyboard" class="grid grid-cols-10 gap-1 mb-4">
+                    <!-- Keyboard will be generated here by JavaScript -->
+                </div>
+
+                <!-- Scoreboard -->
+                <div id="scoreboard" class="hidden">
+                    <h2 class="text-2xl font-bold mb-4 text-center">KẾT QUẢ</h2>
+                    <div id="scoreboardTeams" class="grid grid-cols-1 gap-4"></div>
+                    <div class="text-center mt-6">
+                        <button onclick="resetGame()" class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                            Chơi lại
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-4">Hướng dẫn chơi</h2>
+            <ol class="list-decimal pl-5 space-y-2">
+                <li>Chọn số đội chơi và đặt tên cho mỗi đội</li>
+                <li>Mỗi đội sẽ thay phiên nhau gõ các từ hiện lên trên màn hình</li>
+                <li>Gõ đúng để ghi điểm, gõ sai sẽ bị trừ thời gian</li>
+                <li>Đội nào ghi được nhiều điểm nhất sẽ thắng!</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Audio elements -->
+    <audio id="correctSound" src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3"></audio>
+    <audio id="wrongSound" src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3"></audio>
+    <audio id="winSound" src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"></audio>
+
+    <script>
+        // Game state and server connection
+        const gameState = {
+            teams: [],
+            currentTeamIndex: 0,
+            isPlaying: false,
+            timeLeft: 60,
+            timerInterval: null,
+            currentWord: '',
+            currentIndex: 0,
+            score: {},
+            playerScores: {},
+            socket: null,
+            gameId: null
+            words: [
+                "xin chào", "học sinh", "lớp ba", "mái trường", "thầy cô", 
+                "bạn bè", "đoàn kết", "học tập", "siêng năng", "vui vẻ",
+                "hạnh phúc", "gia đình", "quê hương", "việt nam", "hoa điểm mười",
+                "trường học", "lễ phép", "chăm chỉ", "ngoan ngoãn", "thông minh",
+                "sạch sẽ", "gọn gàng", "văn minh", "thân thiện", "hòa đồng"
+            ]
+        };
+
+        // DOM elements
+        const teamSetup = document.getElementById('teamSetup');
+        const teamNamesContainer = document.getElementById('teamNamesContainer');
+        const startGameBtn = document.getElementById('startGameBtn');
+        const gameScreen = document.getElementById('gameScreen');
+        const timer = document.getElementById('timer');
+        const teamsProgress = document.getElementById('teamsProgress');
+        const currentTeamDisplay = document.getElementById('currentTeamDisplay');
+        const wordDisplay = document.getElementById('wordDisplay');
+        const keyboard = document.getElementById('keyboard');
+        const scoreboard = document.getElementById('scoreboard');
+        const scoreboardTeams = document.getElementById('scoreboardTeams');
+        const gameTimeSelect = document.getElementById('gameTime');
+
+        // Audio elements
+        const correctSound = document.getElementById('correctSound');
+        const wrongSound = document.getElementById('wrongSound');
+        const winSound = document.getElementById('winSound');
+
+        // Game modes
+        function showTeacherMode() {
+            document.getElementById('modeSelection').classList.add('hidden');
+            document.getElementById('gameHeader').classList.remove('hidden');
+            document.getElementById('teamSetup').classList.remove('hidden');
+        }
+
+        function showStudentMode() {
+            document.getElementById('modeSelection').classList.add('hidden');
+            document.getElementById('gameHeader').classList.remove('hidden');
+            document.getElementById('studentSetup').classList.remove('hidden');
+            
+            // Populate team selection
+            const teamSelect = document.getElementById('teamSelect');
+            teamSelect.innerHTML = '<option value="">-- Chọn đội --</option>';
+            gameState.teams.forEach(team => {
+                const option = document.createElement('option');
+                option.value = team;
+                option.textContent = team;
+                teamSelect.appendChild(option);
+            });
+        }
+
+        function joinGame() {
+            const code = document.getElementById('gameCode').value.trim();
+            const name = document.getElementById('studentName').value.trim();
+            const team = document.getElementById('teamSelect').value;
+            
+            if (code && name && team) {
+                gameState.socket.send(JSON.stringify({
+                    type: 'joinGame',
+                    gameId: code,
+                    playerName: name,
+                    team: team
+                }));
+                
+                document.getElementById('studentSetup').classList.add('hidden');
+                document.getElementById('gameScreen').classList.remove('hidden');
+                
+                gameState.playerName = name;
+                gameState.playerScores[name] = 0;
+            } else {
+                alert('Vui lòng điền đầy đủ thông tin!');
+            }
+        }
+
+        // Initialize the game and server connection
+        function init() {
+            // Connect to WebSocket server
+            gameState.socket = new WebSocket('wss://your-server-url.com');
+            
+            gameState.socket.onopen = function() {
+                console.log('Connected to game server');
+            };
+            
+            gameState.socket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleServerMessage(data);
+            };
+            
+            // Generate a random game code for teacher
+            gameState.gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
+            document.getElementById('gameCodeValue').textContent = gameState.gameId;
+            document.getElementById('gameCodeDisplay').classList.remove('hidden');
+            
+            // Generate keyboard
+            generateKeyboard();
+            
+            // Set up event listeners
+            document.addEventListener('keydown', handleKeyPress);
+        }
+
+        function handleServerMessage(data) {
+            switch(data.type) {
+                case 'gameState':
+                    updateGameState(data.state);
+                    break;
+                case 'playerJoined':
+                    showNotification(`${data.playerName} joined the game`);
+                    break;
+                // Add other message types as needed
+            }
+        }
+
+        // Set number of teams
+        function setTeamCount(count) {
+            teamNamesContainer.innerHTML = '';
+            teamNamesContainer.classList.remove('hidden');
+            teamNamesContainer.classList.add('grid');
+            
+            const teamColors = ['team-1', 'team-2', 'team-3', 'team-4'];
+            
+            for (let i = 0; i < count; i++) {
+                const teamDiv = document.createElement('div');
+                teamDiv.className = `p-4 rounded-lg ${teamColors[i]}`;
+                
+                teamDiv.innerHTML = `
+                    <label class="block text-lg font-semibold mb-2">Tên đội ${i+1}</label>
+                    <input type="text" id="teamName${i}" class="w-full p-2 border rounded-lg" 
+                           placeholder="Nhập tên đội" value="Đội ${i+1}">
+                `;
+                
+                teamNamesContainer.appendChild(teamDiv);
+            }
+            
+            startGameBtn.classList.remove('hidden');
+        }
+
+        // Start the game
+        function startGame(isStudent = false) {
+            if (!isStudent) {
+                // Get team names from teacher setup
+                gameState.teams = [];
+                gameState.score = {};
+                
+                const teamInputs = teamNamesContainer.querySelectorAll('input[type="text"]');
+                teamInputs.forEach((input, index) => {
+                    const name = input.value.trim() || `Đội ${index + 1}`;
+                    gameState.teams.push(name);
+                    gameState.score[name] = 0;
+                });
+                
+                // Notify server game is starting
+                gameState.socket.send(JSON.stringify({
+                    type: 'startGame',
+                    gameId: gameState.gameId,
+                    teams: gameState.teams,
+                    duration: parseInt(gameTimeSelect.value)
+                }));
+            }
+            
+            // Set game time
+            gameState.timeLeft = parseInt(gameTimeSelect.value);
+            updateTimerDisplay();
+            
+            // Initialize game state
+            gameState.currentTeamIndex = 0;
+            gameState.isPlaying = true;
+            
+            // Hide setup, show game
+            teamSetup.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            scoreboard.classList.add('hidden');
+            
+            // Start timer
+            gameState.timerInterval = setInterval(updateTimer, 1000);
+            
+            // Show current team
+            updateCurrentTeamDisplay();
+            
+            // Generate first word
+            newWord();
+        }
+
+        // Update timer
+        function updateTimer() {
+            gameState.timeLeft--;
+            updateTimerDisplay();
+            
+            if (gameState.timeLeft <= 0) {
+                endGame();
+            }
+        }
+
+        // Update timer display
+        function updateTimerDisplay() {
+            const minutes = Math.floor(gameState.timeLeft / 60);
+            const seconds = gameState.timeLeft % 60;
+            timer.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        }
+
+        // Update current team display
+        function updateCurrentTeamDisplay() {
+            const teamName = gameState.teams[gameState.currentTeamIndex];
+            const teamColors = ['bg-pink-200', 'bg-red-200', 'bg-orange-200', 'bg-green-200'];
+            currentTeamDisplay.textContent = `Đội hiện tại: ${teamName}`;
+            currentTeamDisplay.className = `text-center py-2 rounded-lg mb-4 text-xl font-bold ${teamColors[gameState.currentTeamIndex]}`;
+            
+            // Update progress bars
+            updateProgressBars();
+        }
+
+        // Update progress bars for all teams
+        function updateProgressBars() {
+            teamsProgress.innerHTML = '';
+            
+            gameState.teams.forEach((team, index) => {
+                const teamScore = gameState.score[team] || 0;
+                const teamColors = ['bg-pink-500', 'bg-red-500', 'bg-orange-500', 'bg-green-500'];
+                
+                const teamDiv = document.createElement('div');
+                teamDiv.className = 'space-y-1';
+                teamDiv.innerHTML = `
+                    <div class="flex justify-between">
+                        <span class="font-medium">${team}</span>
+                        <span class="font-bold">${teamScore} điểm</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                        <div class="progress-bar h-4 rounded-full ${teamColors[index]}" 
+                             style="width: ${Math.min(teamScore, 100)}%"></div>
+                    </div>
+                `;
+                
+                teamsProgress.appendChild(teamDiv);
+            });
+        }
+
+        // Generate a new random word
+        function newWord() {
+            gameState.currentWord = gameState.words[Math.floor(Math.random() * gameState.words.length)];
+            gameState.currentIndex = 0;
+            
+            // Display word with first character highlighted
+            displayWord();
+        }
+
+        // Display the current word with highlighting
+        function displayWord() {
+            if (gameState.currentIndex < gameState.currentWord.length) {
+                const beforeChar = gameState.currentWord.substring(0, gameState.currentIndex);
+                const currentChar = gameState.currentWord[gameState.currentIndex];
+                const afterChar = gameState.currentWord.substring(gameState.currentIndex + 1);
+                
+                wordDisplay.innerHTML = `
+                    <span>${beforeChar}</span>
+                    <span class="text-blue-600 underline">${currentChar}</span>
+                    <span>${afterChar}</span>
+                `;
+            } else {
+                // Word completed
+                wordDisplay.textContent = gameState.currentWord;
+                
+                // Add score for current team and player
+                const currentTeam = gameState.teams[gameState.currentTeamIndex];
+                gameState.score[currentTeam] = (gameState.score[currentTeam] || 0) + 1;
+                const playerName = document.getElementById('studentName').value.trim();
+                if (playerName) {
+                    gameState.playerScores[playerName] = (gameState.playerScores[playerName] || 0) + 1;
+                }
+                
+                // Play correct sound
+                correctSound.currentTime = 0;
+                correctSound.play();
+                
+                // Highlight word briefly
+                wordDisplay.classList.add('bg-green-100');
+                setTimeout(() => {
+                    wordDisplay.classList.remove('bg-green-100');
+                    
+                    // Switch to next team
+                    switchTeam();
+                    
+                    // New word after short delay
+                    setTimeout(newWord, 500);
+                }, 500);
+                
+                // Update progress
+                updateProgressBars();
+            }
+        }
+
+        // Switch to next team
+        function switchTeam() {
+            gameState.currentTeamIndex = (gameState.currentTeamIndex + 1) % gameState.teams.length;
+            updateCurrentTeamDisplay();
+        }
+
+        // Handle key press
+        function handleKeyPress(e) {
+            if (!gameState.isPlaying || gameState.currentWord.length === 0) return;
+            
+            const expectedKey = gameState.currentWord[gameState.currentIndex].toLowerCase();
+            const pressedKey = e.key.toLowerCase();
+            
+            // Find and highlight the pressed key on keyboard
+            highlightKey(pressedKey, expectedKey === pressedKey);
+            
+            if (expectedKey === pressedKey) {
+                // Correct key
+                gameState.currentIndex++;
+                displayWord();
+            } else {
+                // Wrong key
+                wrongSound.currentTime = 0;
+                wrongSound.play();
+                
+                // Subtract time for wrong key (minimum 1 second)
+                gameState.timeLeft = Math.max(1, gameState.timeLeft - 1);
+                updateTimerDisplay();
+                
+                // Show wrong feedback
+                wordDisplay.classList.add('wrong');
+                setTimeout(() => wordDisplay.classList.remove('wrong'), 500);
+            }
+        }
+
+        // Highlight key on keyboard
+        function highlightKey(key, isCorrect) {
+            const keyButtons = document.querySelectorAll('.key-btn');
+            
+            for (const btn of keyButtons) {
+                if (btn.textContent.toLowerCase() === key) {
+                    btn.classList.add('active');
+                    if (isCorrect) {
+                        btn.classList.add('correct');
+                        const effect = document.createElement('div');
+                        effect.className = 'correct-effect animate-ping';
+                        btn.appendChild(effect);
+                        setTimeout(() => effect.remove(), 300);
+                    } else {
+                        btn.classList.add('wrong');
+                    }
+                    
+                    setTimeout(() => {
+                        btn.classList.remove('active', 'correct', 'wrong');
+                    }, 300);
+                    break;
+                }
+            }
+        }
+
+        // Generate keyboard
+        function generateKeyboard() {
+            const rows = [
+                ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
+                ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
+                ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';'],
+                ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/']
+            ];
+            
+            keyboard.innerHTML = '';
+            
+            rows.forEach(row => {
+                row.forEach(key => {
+                    const keyBtn = document.createElement('div');
+                    keyBtn.className = 'key text-center py-3 bg-gray-100 rounded-lg font-bold cursor-pointer select-none key-btn';
+                    keyBtn.textContent = key;
+                    keyBtn.addEventListener('click', () => {
+                        handleKeyPress({key: key});
+                    });
+                    keyboard.appendChild(keyBtn);
+                });
+            });
+        }
+
+        // End the game
+        function endGame() {
+            gameState.isPlaying = false;
+            clearInterval(gameState.timerInterval);
+            
+            // Hide game, show scoreboard
+            gameScreen.classList.add('hidden');
+            scoreboard.classList.remove('hidden');
+            
+            // Calculate winner
+            const scores = Object.entries(gameState.score);
+            scores.sort((a, b) => b[1] - a[1]);
+            
+            // Display scores
+            scoreboardTeams.innerHTML = '';
+            scores.forEach(([team, score], index) => {
+                const medalColors = ['text-yellow-500', 'text-gray-400', 'text-amber-700'];
+                const medalIcons = ['🥇', '🥈', '🥉'];
+                
+                const teamDiv = document.createElement('div');
+                teamDiv.className = `flex justify-between items-center p-4 rounded-lg ${index < 3 ? 'bg-gray-100' : ''}`;
+                
+                let medalHtml = '';
+                if (index < 3) {
+                    medalHtml = `
+                        <span class="text-2xl ${medalColors[index]}">
+                            ${medalIcons[index]}
+                        </span>
+                    `;
+                }
+                
+                teamDiv.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        ${medalHtml}
+                        <span class="text-xl font-bold">${team}</span>
+                    </div>
+                    <span class="text-xl font-bold">${score} điểm</span>
+                    <div class="text-sm mt-2">
+                        ${Object.entries(gameState.playerScores)
+                          .filter(([pname, pscore]) => pscore > 0)
+                          .map(([pname, pscore]) => `${pname}: ${pscore}`)
+                          .join(', ')}
+                    </div>
+                `;
+                
+                if (index === 0) {
+                    setTimeout(() => {
+                        winSound.play();
+                        teamDiv.classList.add('celebrate');
+                    }, 500);
+                }
+                
+                scoreboardTeams.appendChild(teamDiv);
+            });
+        }
+
+        // Reset the game
+        function resetGame() {
+            scoreboard.classList.add('hidden');
+            teamSetup.classList.remove('hidden');
+            wordDisplay.textContent = 'Nhấn phím bất kỳ để bắt đầu';
+        }
+
+        // Initialize the game when page loads
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
