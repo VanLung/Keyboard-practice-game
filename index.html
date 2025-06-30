@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Luyện Gõ Phím - Thi Đấu Đội</title>
+    <title>Typing Master - Team Challenge</title> <!-- CHANGED -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- NEW: Confetti.js for celebration effect -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Gochi+Hand&family=Patrick+Hand&display=swap');
 
@@ -118,8 +120,8 @@
 
         <!-- Header -->
         <header class="text-center mb-8 hidden" id="gameHeader">
-            <h1 class="title text-5xl md:text-6xl mb-2">Luyện Gõ Phím</h1>
-            <p class="text-xl">Thi đấu đồng đội - Ai nhanh hơn?</p>
+            <h1 class="title text-5xl md:text-6xl mb-2">Typing Master</h1> <!-- CHANGED -->
+            <p class="text-xl">Team Challenge - Who's Faster?</p> <!-- CHANGED -->
         </header>
 
         <!-- Game Area -->
@@ -170,6 +172,17 @@
                     <input type="text" id="studentName" class="w-full p-3 border rounded-lg text-center text-xl"
                            placeholder="Nhập tên của bạn">
                 </div>
+                <div class="mb-4">
+                    <label class="block text-lg font-semibold mb-2">Mã trò chơi</label>
+                    <input type="text" id="studentGameCode" class="w-full p-3 border rounded-lg text-center text-xl"
+                           placeholder="Nhập mã từ giáo viên" oninput="getAvailableTeams()">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-lg font-semibold mb-2">Chọn đội</label>
+                    <select id="studentTeamSelect" class="w-full p-3 border rounded-lg text-center text-xl">
+                        <option value="">-- Chọn đội --</option>
+                    </select>
+                </div>
                 <button onclick="startSinglePlayerGame()" class="w-full py-3 bg-green-500 text-white rounded-lg text-xl hover:bg-green-600">
                     Bắt đầu chơi đơn
                 </button>
@@ -200,10 +213,15 @@
                 <!-- Scoreboard -->
                 <div id="scoreboard" class="hidden">
                     <h2 class="text-2xl font-bold mb-4 text-center">KẾT QUẢ</h2>
+                    <!-- NEW: Winner message -->
+                    <p id="winnerMessage" class="text-3xl font-bold text-center mb-4 text-blue-600"></p>
                     <div id="scoreboardTeams" class="grid grid-cols-1 gap-4"></div>
                     <div class="text-center mt-6">
-                        <button onclick="resetGame()" class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                        <button onclick="resetGameForStudent()" class="px-6 py-2 bg-blue-500 text-white rounded-lg text-lg hover:bg-blue-600">
                             Chơi lại
+                        </button>
+                        <button onclick="resetGame()" class="px-6 py-2 bg-gray-500 text-white rounded-lg text-lg hover:bg-gray-600 ml-4">
+                            Về màn hình chính
                         </button>
                     </div>
                 </div>
@@ -215,7 +233,7 @@
             <h2 class="text-2xl font-bold mb-4">Hướng dẫn chơi</h2>
             <ol class="list-decimal pl-5 space-y-2">
                 <li>Chọn số đội chơi và đặt tên cho mỗi đội (chế độ Giáo viên)</li>
-                <li>Hoặc nhập tên để chơi đơn (chế độ Học sinh)</li>
+                <li>Hoặc nhập tên và chọn đội để chơi đơn (chế độ Học sinh)</li>
                 <li>Gõ đúng để ghi điểm, gõ sai sẽ bị trừ thời gian</li>
                 <li>Đội nào ghi được nhiều điểm nhất sẽ thắng! (hoặc bạn ghi được nhiều điểm nhất trong chơi đơn)</li>
             </ol>
@@ -228,46 +246,6 @@
     <audio id="winSound" src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3"></audio>
 
     <script>
-        // Simple Telex converter (for demonstration, a more robust library might be better for production)
-        // This is a simplified version. For full Telex rules, consider a dedicated library.
-        const telexMap = {
-            'a': { 's': 'á', 'f': 'à', 'r': 'ả', 'x': 'ã', 'j': 'ạ', 'w': 'ă', '^': 'â' },
-            'e': { 's': 'é', 'f': 'è', 'r': 'ẻ', 'x': 'ẽ', 'j': 'ẹ', '^': 'ê' },
-            'i': { 's': 'í', 'f': 'ì', 'r': 'ỉ', 'x': 'ĩ', 'j': 'ị' },
-            'o': { 's': 'ó', 'f': 'ò', 'r': 'ỏ', 'x': 'õ', 'j': 'ọ', 'w': 'ơ', '^': 'ô' },
-            'u': { 's': 'ú', 'f': 'ù', 'r': 'ủ', 'x': 'ũ', 'j': 'ụ', 'w': 'ư' },
-            'y': { 's': 'ý', 'f': 'ỳ', 'r': 'ỷ', 'x': 'ỹ', 'j': 'ỵ' },
-            'd': { 'd': 'đ' }
-        };
-
-        const accentMarks = ['s', 'f', 'r', 'x', 'j']; // Sắc, Huyền, Hỏi, Ngã, Nặng
-        const specialCharModifiers = ['d', 'w', '^']; // Đ, Ư/Ơ/Ă, Â/Ê/Ô
-
-        function applyTelex(baseChar, modifier) {
-            baseChar = baseChar.toLowerCase();
-            modifier = modifier.toLowerCase();
-
-            if (telexMap[baseChar] && telexMap[baseChar][modifier]) {
-                return telexMap[baseChar][modifier];
-            }
-            return null; // No Telex conversion
-        }
-
-        // This function will be used to convert the word to its "base" form for comparison
-        // and to track the state of the input.
-        function removeVietnameseAccents(str) {
-            str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
-            str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
-            str = str.replace(/ì|í|ị|ỉ|ĩ/g, "i");
-            str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o");
-            str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u");
-            str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y");
-            str = str.replace(/đ/g, "d");
-            return str;
-        }
-    </script>
-
-    <script>
         // Game state and server connection (SIMPLIFIED FOR SINGLE PLAYER)
         const gameState = {
             teams: [], // Will contain only one "team" for single player
@@ -278,17 +256,25 @@
             currentWord: '',
             currentIndex: 0,
             score: {}, // Will track score for the single "team"
-            playerScores: {}, // Will track score for the single player
-            // socket: null, // REMOVED: No WebSocket connection for single player
+            playerScores: {}, // NEW: { "TeamName": { "PlayerName": score } }
             gameId: null, // Kept for consistency, but not used for multi-player
-            inputBuffer: '', // NEW: Stores the user's current input for Telex processing
             words: [
-                "xin chào", "học sinh", "lớp ba", "mái trường", "thầy cô",
-                "bạn bè", "đoàn kết", "học tập", "siêng năng", "vui vẻ",
-                "hạnh phúc", "gia đình", "quê hương", "việt nam", "hoa điểm mười",
-                "trường học", "lễ phép", "chăm chỉ", "ngoan ngoãn", "thông minh",
-                "sạch sẽ", "gọn gàng", "văn minh", "thân thiện", "hòa đồng"
-            ]
+                "hello", "student", "teacher", "school", "friends",
+                "unity", "study", "hardworking", "happy", "family",
+                "homeland", "vietnam", "typing", "keyboard", "computer",
+                "lesson", "polite", "diligent", "obedient", "smart",
+                "clean", "tidy", "civilized", "friendly", "harmonious",
+                "apple", "banana", "orange", "grape", "strawberry",
+                "cat", "dog", "bird", "fish", "rabbit",
+                "sun", "moon", "star", "cloud", "rain",
+                "book", "pen", "pencil", "paper", "eraser",
+                "car", "bus", "train", "plane", "bicycle"
+            ],
+            availableTeamsForStudent: [], // To store teams for student to choose
+            // Store student's previous choices for "Chơi lại"
+            lastStudentName: '',
+            lastStudentGameCode: '',
+            lastStudentTeamName: ''
         };
 
         // DOM elements
@@ -297,7 +283,7 @@
         const teamSetup = document.getElementById('teamSetup');
         const teamNamesContainer = document.getElementById('teamNamesContainer');
         const startGameBtn = document.getElementById('startGameBtn');
-        const studentSetup = document.getElementById('studentSetup'); // Added
+        const studentSetup = document.getElementById('studentSetup');
         const gameScreen = document.getElementById('gameScreen');
         const timer = document.getElementById('timer');
         const teamsProgress = document.getElementById('teamsProgress');
@@ -307,7 +293,10 @@
         const scoreboard = document.getElementById('scoreboard');
         const scoreboardTeams = document.getElementById('scoreboardTeams');
         const gameTimeSelect = document.getElementById('gameTime');
-        const studentNameInput = document.getElementById('studentName'); // Added
+        const studentNameInput = document.getElementById('studentName');
+        const studentGameCodeInput = document.getElementById('studentGameCode');
+        const studentTeamSelect = document.getElementById('studentTeamSelect');
+        const winnerMessage = document.getElementById('winnerMessage');
 
         // Audio elements
         const correctSound = document.getElementById('correctSound');
@@ -319,9 +308,9 @@
             modeSelection.classList.add('hidden');
             gameHeader.classList.remove('hidden');
             teamSetup.classList.remove('hidden');
-            studentSetup.classList.add('hidden'); // Hide student setup
-            gameScreen.classList.add('hidden'); // Hide game screen
-            scoreboard.classList.add('hidden'); // Hide scoreboard
+            studentSetup.classList.add('hidden');
+            gameScreen.classList.add('hidden');
+            scoreboard.classList.add('hidden');
 
             // Reset game state for teacher mode
             gameState.teams = [];
@@ -330,41 +319,104 @@
             teamNamesContainer.innerHTML = '';
             teamNamesContainer.classList.add('hidden');
             startGameBtn.classList.add('hidden');
-            document.getElementById('gameCodeDisplay').classList.remove('hidden'); // Show game code for teacher
-            gameState.gameId = Math.random().toString(36).substring(2, 6).toUpperCase();
+            document.getElementById('gameCodeDisplay').classList.remove('hidden');
+            gameState.gameId = Math.random().toString(36).substring(2, 6).toUpperCase(); // Generate a unique game ID
             document.getElementById('gameCodeValue').textContent = gameState.gameId;
+
+            // Clear student's previous choices
+            gameState.lastStudentName = '';
+            gameState.lastStudentGameCode = '';
+            gameState.lastStudentTeamName = '';
         }
 
         function showStudentMode() {
             modeSelection.classList.add('hidden');
             gameHeader.classList.remove('hidden');
-            teamSetup.classList.add('hidden'); // Hide teacher setup
-            studentSetup.classList.remove('hidden'); // Show student setup
-            gameScreen.classList.add('hidden'); // Hide game screen
-            scoreboard.classList.add('hidden'); // Hide scoreboard
+            teamSetup.classList.add('hidden');
+            studentSetup.classList.remove('hidden');
+            gameScreen.classList.add('hidden');
+            scoreboard.classList.add('hidden');
 
             // Reset game state for student mode (single player)
             gameState.teams = [];
             gameState.score = {};
             gameState.playerScores = {};
-            studentNameInput.value = ''; // Clear student name input
+            studentNameInput.value = gameState.lastStudentName; // Restore last name
+            studentGameCodeInput.value = gameState.lastStudentGameCode; // Restore last game code
+            getAvailableTeams(); // Populate teams based on restored code
+            studentTeamSelect.value = gameState.lastStudentTeamName; // Restore last selected team
+
+            if (!gameState.lastStudentName) { // If no previous student, clear inputs
+                studentNameInput.value = '';
+                studentGameCodeInput.value = '';
+                studentTeamSelect.innerHTML = '<option value="">-- Chọn đội --</option>';
+                gameState.availableTeamsForStudent = [];
+            }
+        }
+
+        // Simulate getting available teams for student
+        function getAvailableTeams() {
+            const gameCode = studentGameCodeInput.value.trim().toUpperCase();
+            // In a real multi-player game, this would be an API call to the server
+            // For this single-player simulation, we'll just check if the game ID matches the teacher's generated one
+            if (gameCode === gameState.gameId && gameState.teams.length > 0) {
+                gameState.availableTeamsForStudent = gameState.teams.map(team => team.name);
+                populateStudentTeamSelect();
+            } else {
+                gameState.availableTeamsForStudent = [];
+                studentTeamSelect.innerHTML = '<option value="">-- Chọn đội --</option>';
+            }
+        }
+
+        // Populate the team select dropdown for students
+        function populateStudentTeamSelect() {
+            studentTeamSelect.innerHTML = '<option value="">-- Chọn đội --</option>';
+            gameState.availableTeamsForStudent.forEach(teamName => {
+                const option = document.createElement('option');
+                option.value = teamName;
+                option.textContent = teamName;
+                studentTeamSelect.appendChild(option);
+            });
         }
 
         // Simplified joinGame for single player
         function startSinglePlayerGame() {
             const name = studentNameInput.value.trim();
+            const selectedTeamName = studentTeamSelect.value;
+            const gameCode = studentGameCodeInput.value.trim().toUpperCase();
 
-            if (name) {
-                // For single player, create one "team" with the player's name
-                const singlePlayerTeamName = `Người chơi: ${name}`;
-                gameState.teams = [{ name: singlePlayerTeamName }];
-                gameState.score[singlePlayerTeamName] = 0;
-                gameState.playerScores[name] = 0; // Track player's score
+            if (!name) {
+                alert('Vui lòng nhập tên của bạn!');
+                return;
+            }
+            if (!gameCode || gameCode !== gameState.gameId) {
+                alert('Mã trò chơi không hợp lệ hoặc chưa có game nào được tạo!');
+                return;
+            }
+            if (!selectedTeamName) {
+                alert('Vui lòng chọn đội của bạn!');
+                return;
+            }
+
+            // Store student's choices
+            gameState.lastStudentName = name;
+            gameState.lastStudentGameCode = gameCode;
+            gameState.lastStudentTeamName = selectedTeamName;
+
+            // For single player, create one "team" with the player's name and selected team
+            // We'll assign the student to the chosen team and track their score within that team
+            const chosenTeam = gameState.teams.find(team => team.name === selectedTeamName);
+            if (chosenTeam) {
+                // Reset teams to only include the chosen team for single player display
+                gameState.teams = [{ name: chosenTeam.name, score: 0 }]; // Reset score for new round
+                gameState.score = { [chosenTeam.name]: 0 }; // Reset score for the team
+                // Initialize playerScores for the chosen team and player
+                gameState.playerScores = { [chosenTeam.name]: { [name]: 0 } };
 
                 studentSetup.classList.add('hidden');
                 startGame(true); // Start the game in single player mode
             } else {
-                alert('Vui lòng nhập tên của bạn!');
+                alert('Đội bạn chọn không tồn tại. Vui lòng thử lại.');
             }
         }
 
@@ -385,17 +437,20 @@
 
             const teamColors = ['team-1', 'team-2', 'team-3', 'team-4'];
 
+            gameState.teams = []; // Clear existing teams
             for (let i = 0; i < count; i++) {
+                const teamName = `Đội ${i + 1}`;
                 const teamDiv = document.createElement('div');
                 teamDiv.className = `p-4 rounded-lg ${teamColors[i]}`;
 
                 teamDiv.innerHTML = `
                     <label class="block text-lg font-semibold mb-2">Tên đội ${i+1}</label>
                     <input type="text" id="teamName${i}" class="w-full p-2 border rounded-lg"
-                           placeholder="Nhập tên đội" value="Đội ${i+1}">
+                           placeholder="Nhập tên đội" value="${teamName}">
                 `;
-
                 teamNamesContainer.appendChild(teamDiv);
+                gameState.teams.push({ name: teamName, score: 0 }); // Initialize team object
+                gameState.score[teamName] = 0; // Initialize score for the team
             }
 
             startGameBtn.classList.remove('hidden');
@@ -407,12 +462,14 @@
                 // Get team names from teacher setup
                 gameState.teams = [];
                 gameState.score = {};
+                gameState.playerScores = {}; // Ensure playerScores is reset for teacher mode
 
                 const teamInputs = teamNamesContainer.querySelectorAll('input[type="text"]');
                 teamInputs.forEach((input, index) => {
                     const name = input.value.trim() || `Đội ${index + 1}`;
                     gameState.teams.push({ name: name }); // Store as object for consistency
                     gameState.score[name] = 0;
+                    gameState.playerScores[name] = {}; // Initialize playerScores for each team
                 });
             }
 
@@ -423,7 +480,6 @@
             // Initialize game state
             gameState.currentTeamIndex = 0;
             gameState.isPlaying = true;
-            gameState.inputBuffer = ''; // Reset input buffer for new game
 
             // Hide setup, show game
             teamSetup.classList.add('hidden');
@@ -504,7 +560,6 @@
         function newWord() {
             gameState.currentWord = gameState.words[Math.floor(Math.random() * gameState.words.length)];
             gameState.currentIndex = 0;
-            gameState.inputBuffer = ''; // Reset input buffer for new word
 
             // Display word with first character highlighted
             displayWord();
@@ -512,16 +567,17 @@
 
         // Display the current word with highlighting
         function displayWord() {
-            // Display the user's input buffer, followed by the remaining part of the target word
-            const targetRemaining = gameState.currentWord.substring(gameState.inputBuffer.length);
+            if (gameState.currentIndex < gameState.currentWord.length) {
+                const beforeChar = gameState.currentWord.substring(0, gameState.currentIndex);
+                const currentChar = gameState.currentWord[gameState.currentIndex];
+                const afterChar = gameState.currentWord.substring(gameState.currentIndex + 1);
 
-            wordDisplay.innerHTML = `
-                <span class="text-blue-600">${gameState.inputBuffer}</span>
-                <span>${targetRemaining}</span>
-            `;
-
-            // If the input buffer matches the current word, it's completed
-            if (gameState.inputBuffer === gameState.currentWord) {
+                wordDisplay.innerHTML = `
+                    <span>${beforeChar}</span>
+                    <span class="text-blue-600 underline">${currentChar}</span>
+                    <span>${afterChar}</span>
+                `;
+            } else {
                 // Word completed
                 wordDisplay.textContent = gameState.currentWord;
 
@@ -529,11 +585,15 @@
                 const currentTeam = gameState.teams[gameState.currentTeamIndex];
                 gameState.score[currentTeam.name] = (gameState.score[currentTeam.name] || 0) + 1;
 
-                // If single player, update player's score
-                const playerName = studentNameInput.value.trim();
-                if (playerName) {
-                    gameState.playerScores[playerName] = (gameState.playerScores[playerName] || 0) + 1;
+                // Update player's score within their team
+                const playerName = studentNameInput.value.trim(); // Get current student's name
+                if (playerName) { // Only update if a student name is provided
+                    if (!gameState.playerScores[currentTeam.name]) {
+                        gameState.playerScores[currentTeam.name] = {};
+                    }
+                    gameState.playerScores[currentTeam.name][playerName] = (gameState.playerScores[currentTeam.name][playerName] || 0) + 1;
                 }
+
 
                 // Play correct sound
                 correctSound.currentTime = 0;
@@ -566,12 +626,13 @@
         function handleKeyPress(e) {
             if (!gameState.isPlaying || gameState.currentWord.length === 0) return;
 
+            const expectedKey = gameState.currentWord[gameState.currentIndex].toLowerCase();
             const pressedKey = e.key.toLowerCase();
 
             // Handle Backspace
             if (e.key === 'Backspace') {
-                if (gameState.inputBuffer.length > 0) {
-                    gameState.inputBuffer = gameState.inputBuffer.slice(0, -1);
+                if (gameState.currentIndex > 0) {
+                    gameState.currentIndex--; // Move back one character
                     displayWord();
                 }
                 return;
@@ -582,36 +643,11 @@
                 return; // Ignore other keys like Shift, Ctrl, Alt, F-keys etc.
             }
 
-            // Apply Telex conversion
-            let charToAdd = pressedKey;
-            if (gameState.inputBuffer.length > 0) {
-                const lastCharInInput = gameState.inputBuffer[gameState.inputBuffer.length - 1];
-                const convertedChar = applyTelex(lastCharInInput, pressedKey);
-
-                if (convertedChar) {
-                    gameState.inputBuffer = gameState.inputBuffer.slice(0, -1) + convertedChar;
-                    charToAdd = ''; // Don't add the modifier key as a new character
-                }
-            }
-            
-            if (charToAdd) { // Add the character if it's not a modifier that was consumed by Telex
-                gameState.inputBuffer += charToAdd;
-            }
-
-            // Compare the current input buffer with the target word
-            const currentInputNormalized = removeVietnameseAccents(gameState.inputBuffer);
-            const targetWordNormalized = removeVietnameseAccents(gameState.currentWord);
-
-            // Check if the current input matches the beginning of the target word
-            if (targetWordNormalized.startsWith(currentInputNormalized)) {
-                // If the input buffer matches the full word, it's correct
-                if (gameState.inputBuffer === gameState.currentWord) {
-                    // Word completed, displayWord() will handle scoring and new word
-                    displayWord();
-                } else {
-                    // Input is correct so far, just update display
-                    displayWord();
-                }
+            // Direct comparison for English typing
+            if (expectedKey === pressedKey) {
+                // Correct key
+                gameState.currentIndex++;
+                displayWord();
             } else {
                 // Wrong key
                 wrongSound.currentTime = 0;
@@ -624,17 +660,10 @@
                 // Show wrong feedback
                 wordDisplay.classList.add('wrong');
                 setTimeout(() => wordDisplay.classList.remove('wrong'), 500);
-
-                // Revert input buffer to the last correct state or clear it
-                // For simplicity, we'll just remove the last incorrect character
-                if (gameState.inputBuffer.length > 0) {
-                    gameState.inputBuffer = gameState.inputBuffer.slice(0, -1);
-                }
-                displayWord(); // Update display after reverting
             }
 
             // Highlight the pressed key on keyboard (visual feedback)
-            highlightKey(pressedKey, targetWordNormalized.startsWith(currentInputNormalized));
+            highlightKey(pressedKey, expectedKey === pressedKey);
         }
 
         // Highlight key on keyboard
@@ -699,6 +728,22 @@
             const scores = Object.entries(gameState.score);
             scores.sort((a, b) => b[1] - a[1]);
 
+            // Display winner message
+            if (scores.length > 0) {
+                const winnerTeamName = scores[0][0];
+                const winnerScore = scores[0][1];
+                winnerMessage.textContent = `🎉 ${winnerTeamName} wins with ${winnerScore} points! 🎉`; // Changed message to English
+                // Trigger confetti effect
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            } else {
+                winnerMessage.textContent = "Game Over!"; // Changed message to English
+            }
+
+
             // Display scores
             scoreboardTeams.innerHTML = '';
             scores.forEach(([teamName, score], index) => {
@@ -706,7 +751,7 @@
                 const medalIcons = ['🥇', '🥈', '🥉'];
 
                 const teamDiv = document.createElement('div');
-                teamDiv.className = `flex justify-between items-center p-4 rounded-lg ${index < 3 ? 'bg-gray-100' : ''}`;
+                teamDiv.className = `flex flex-col justify-between items-start p-4 rounded-lg ${index < 3 ? 'bg-gray-100' : ''}`; // Changed to flex-col and items-start
 
                 let medalHtml = '';
                 if (index < 3) {
@@ -717,22 +762,27 @@
                     `;
                 }
 
-                // Display player scores if available (for single player)
-                let playerScoresHtml = '';
-                const playerName = studentNameInput.value.trim();
-                if (playerName && gameState.playerScores[playerName] !== undefined) {
-                    playerScoresHtml = `<div class="text-sm mt-2">${playerName}: ${gameState.playerScores[playerName]} điểm</div>`;
+                // Display team name and score
+                let teamHeaderHtml = `
+                    <div class="flex items-center gap-4 w-full">
+                        ${medalHtml}
+                        <span class="text-xl font-bold">${teamName}</span>
+                        <span class="text-xl font-bold ml-auto">${score} points</span> <!-- Changed to English -->
+                    </div>
+                `;
+
+                // Display player scores within the team
+                let playerScoresDetailHtml = '';
+                if (gameState.playerScores[teamName] && Object.keys(gameState.playerScores[teamName]).length > 0) {
+                    playerScoresDetailHtml += '<div class="w-full mt-2 pl-8 text-gray-700 text-sm">'; // Indent player scores
+                    for (const playerName in gameState.playerScores[teamName]) {
+                        playerScoresDetailHtml += `<div>${playerName}: ${gameState.playerScores[teamName][playerName]} points</div>`; // Changed to English
+                    }
+                    playerScoresDetailHtml += '</div>';
                 }
 
 
-                teamDiv.innerHTML = `
-                    <div class="flex items-center gap-4">
-                        ${medalHtml}
-                        <span class="text-xl font-bold">${teamName}</span>
-                    </div>
-                    <span class="text-xl font-bold">${score} điểm</span>
-                    ${playerScoresHtml}
-                `;
+                teamDiv.innerHTML = teamHeaderHtml + playerScoresDetailHtml;
 
                 if (index === 0) {
                     setTimeout(() => {
@@ -745,7 +795,34 @@
             });
         }
 
-        // Reset the game
+        // Reset game for student to play again with same settings
+        function resetGameForStudent() {
+            scoreboard.classList.add('hidden');
+            gameScreen.classList.remove('hidden'); // Show game screen again
+
+            // Reset game state for a new round
+            gameState.currentTeamIndex = 0;
+            gameState.isPlaying = true;
+            gameState.timeLeft = parseInt(gameTimeSelect.value); // Reset time
+            gameState.score = {}; // Reset team scores for new round
+            gameState.playerScores = {}; // Reset player scores for new round
+
+            // Re-initialize the team for the student (since it was reset in startSinglePlayerGame)
+            const chosenTeamName = gameState.lastStudentTeamName;
+            const studentName = gameState.lastStudentName;
+            gameState.teams = [{ name: chosenTeamName, score: 0 }];
+            gameState.score[chosenTeamName] = 0;
+            gameState.playerScores[chosenTeamName] = { [studentName]: 0 }; // Initialize player score within the team
+
+            updateTimerDisplay();
+            updateCurrentTeamDisplay();
+            newWord(); // Start a new word
+            clearInterval(gameState.timerInterval);
+            gameState.timerInterval = setInterval(updateTimer, 1000); // Restart timer
+        }
+
+
+        // Reset the game to main menu
         function resetGame() {
             scoreboard.classList.add('hidden');
             modeSelection.classList.remove('hidden'); // Go back to mode selection
@@ -757,7 +834,13 @@
             gameState.teams = [];
             gameState.score = {};
             gameState.playerScores = {};
-            gameState.inputBuffer = ''; // Reset input buffer
+            gameState.availableTeamsForStudent = []; // Clear available teams
+            studentTeamSelect.innerHTML = '<option value="">-- Chọn đội --</option>'; // Clear team options
+
+            // Clear student's previous choices
+            gameState.lastStudentName = '';
+            gameState.lastStudentGameCode = '';
+            gameState.lastStudentTeamName = '';
         }
 
         // Initialize the game when page loads
