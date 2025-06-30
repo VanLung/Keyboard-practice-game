@@ -157,7 +157,7 @@
                         <p id="gameCodeValue" class="text-2xl font-mono bg-gray-100 p-2 rounded"></p>
                         <p class="text-sm text-gray-600">Học sinh nhập mã này để tham gia</p>
                     </div>
-                    <button id="startGameBtn" onclick="startGame()"
+                    <button id="startGameBtn" onclick="startGame(false)"
                         class="px-6 py-3 bg-green-500 text-white rounded-lg text-xl hover:bg-green-600 hidden">
                         BẮT ĐẦU CUỘC CHIẾN!
                     </button>
@@ -318,7 +318,7 @@
             gameState.playerScores = {};
             teamNamesContainer.innerHTML = '';
             teamNamesContainer.classList.add('hidden');
-            startGameBtn.classList.add('hidden');
+            startGameBtn.classList.add('hidden'); // Hide start game button initially
             document.getElementById('gameCodeDisplay').classList.remove('hidden');
             gameState.gameId = Math.random().toString(36).substring(2, 6).toUpperCase(); // Generate a unique game ID
             document.getElementById('gameCodeValue').textContent = gameState.gameId;
@@ -449,30 +449,42 @@
                            placeholder="Nhập tên đội" value="${teamName}">
                 `;
                 teamNamesContainer.appendChild(teamDiv);
-                gameState.teams.push({ name: teamName, score: 0 }); // Initialize team object
+                gameState.teams.push({ name: teamName }); // Initialize team object without score here
                 gameState.score[teamName] = 0; // Initialize score for the team
+                gameState.playerScores[teamName] = {}; // Initialize playerScores for each team
             }
 
-            startGameBtn.classList.remove('hidden');
+            startGameBtn.classList.remove('hidden'); // Show the start game button after teams are set
         }
 
         // Start the game
         function startGame(isSinglePlayer = false) {
             if (!isSinglePlayer) {
-                // Get team names from teacher setup
+                // This block is for teacher mode setup, not for starting the game itself
+                // The teacher just sets up the teams and gets the game ID.
+                // The actual game starts when a student joins and clicks "Bắt đầu chơi đơn".
+                // So, we just update the gameState.teams based on teacher's input.
                 gameState.teams = [];
                 gameState.score = {};
-                gameState.playerScores = {}; // Ensure playerScores is reset for teacher mode
+                gameState.playerScores = {};
 
                 const teamInputs = teamNamesContainer.querySelectorAll('input[type="text"]');
                 teamInputs.forEach((input, index) => {
                     const name = input.value.trim() || `Đội ${index + 1}`;
-                    gameState.teams.push({ name: name }); // Store as object for consistency
+                    gameState.teams.push({ name: name });
                     gameState.score[name] = 0;
-                    gameState.playerScores[name] = {}; // Initialize playerScores for each team
+                    gameState.playerScores[name] = {};
                 });
+
+                // After teacher sets up, hide the setup and show game code (already visible)
+                // The game itself does NOT start for the teacher.
+                teamSetup.classList.add('hidden');
+                // Optionally, you could show a "waiting for players" screen for the teacher here.
+                // For now, it just stays on the game code display.
+                return; // Exit function, game not started for teacher
             }
 
+            // This block runs ONLY when a student starts the game (isSinglePlayer = true)
             // Set game time
             gameState.timeLeft = parseInt(gameTimeSelect.value);
             updateTimerDisplay();
