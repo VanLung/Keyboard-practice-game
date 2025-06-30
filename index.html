@@ -1,4 +1,4 @@
-FileContents: <!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -102,7 +102,7 @@ FileContents: <!DOCTYPE html>
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-start p-4">
-    <div class="absolute inset-0 bg-white bg-opacity-70 z-0"></div>
+    <div class="absolute inset-0 bg-white bg-opacity-70 z-0" style="outline: rgb(0, 0, 0) dotted 3px; outline-offset: 1px;"></div>
 
     <div class="relative z-10 w-full max-w-4xl">
         <!-- Mode Selection -->
@@ -363,12 +363,18 @@ FileContents: <!DOCTYPE html>
         // Simulate getting available teams for student
         function getAvailableTeams() {
             const gameCode = studentGameCodeInput.value.trim().toUpperCase();
-            // NEW: Check if the entered gameCode matches the teacher's generated gameId
-            if (gameCode === gameState.gameId) {
-                // Get team names from teacher's setup inputs
-                const teamInputs = document.querySelectorAll('#teamNamesContainer input[type="text"]');
-                // NEW: Populate availableTeamsForStudent from the teacher's setup
-                gameState.availableTeamsForStudent = Array.from(teamInputs).map(input => input.value.trim() || `Đội ${input.id.replace('teamName','')}`);
+            if (gameCode && gameCode === gameState.gameId) {
+                // Initialize with default team names if no custom names are set
+                if (gameState.teams.length === 0) {
+                    const teamCount = document.querySelectorAll('#teamNamesContainer input[type="text"]').length;
+                    if (teamCount > 0) {
+                        for (let i = 0; i < teamCount; i++) {
+                            gameState.availableTeamsForStudent.push(`Đội ${i+1}`);
+                        }
+                    }
+                } else {
+                    gameState.availableTeamsForStudent = gameState.teams.map(team => team.name);
+                }
                 populateStudentTeamSelect();
             } else {
                 gameState.availableTeamsForStudent = [];
@@ -466,7 +472,8 @@ FileContents: <!DOCTYPE html>
                 gameState.score[teamName] = 0; // Initialize score for the team
                 gameState.playerScores[teamName] = {}; // Initialize playerScores for each team
                 // NEW: Add team name to availableTeamsForStudent for student selection
-                gameState.availableTeamsForStudent.push(teamName);
+                // Always update availableTeamsForStudent to match current teams
+                gameState.availableTeamsForStudent = gameState.teams.map(t => t.name);
             }
 
             startGameBtn.classList.remove('hidden'); // Show the start game button after teams are set
