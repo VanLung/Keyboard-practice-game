@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+FileContents: <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -346,7 +346,8 @@
             
             // Initialize team select dropdown
             studentTeamSelect.innerHTML = '<option value="">-- Chọn đội --</option>';
-            if (gameState.lastStudentGameCode && gameState.lastStudentGameCode === gameState.gameId) {
+            // NEW: Call getAvailableTeams to populate dropdown if game code is already present
+            if (gameState.lastStudentGameCode) { // Check if there's a previous game code
                 getAvailableTeams();
                 studentTeamSelect.value = gameState.lastStudentTeamName; // Restore last selected team
             }
@@ -362,9 +363,11 @@
         // Simulate getting available teams for student
         function getAvailableTeams() {
             const gameCode = studentGameCodeInput.value.trim().toUpperCase();
+            // NEW: Check if the entered gameCode matches the teacher's generated gameId
             if (gameCode === gameState.gameId) {
                 // Get team names from teacher's setup inputs
                 const teamInputs = document.querySelectorAll('#teamNamesContainer input[type="text"]');
+                // NEW: Populate availableTeamsForStudent from the teacher's setup
                 gameState.availableTeamsForStudent = Array.from(teamInputs).map(input => input.value.trim() || `Đội ${input.id.replace('teamName','')}`);
                 populateStudentTeamSelect();
             } else {
@@ -394,6 +397,7 @@
                 alert('Vui lòng nhập tên của bạn!');
                 return;
             }
+            // NEW: Ensure gameCode matches the teacher's gameId
             if (!gameCode || gameCode !== gameState.gameId) {
                 alert('Mã trò chơi không hợp lệ hoặc chưa có game nào được tạo!');
                 return;
@@ -411,11 +415,11 @@
             // For single player, create one "team" with the player's name and selected team
             // We'll assign the student to the chosen team and track their score within that team
             if (gameState.availableTeamsForStudent.includes(selectedTeamName)) {
-                // Reset teams to only include the chosen team for single player display
-                gameState.teams = [{ name: selectedTeamName, score: 0 }]; // Reset score for new round
-                gameState.score = { [chosenTeam.name]: 0 }; // Reset score for the team
-                // Initialize playerScores for the chosen team and player
-                gameState.playerScores = { [chosenTeam.name]: { [name]: 0 } };
+                // NEW: Correctly initialize gameState.teams for single player mode
+                // It should only contain the selected team for the student's game session
+                gameState.teams = [{ name: selectedTeamName, score: 0 }]; 
+                gameState.score = { [selectedTeamName]: 0 }; // Initialize score for the selected team
+                gameState.playerScores = { [selectedTeamName]: { [name]: 0 } }; // Initialize playerScores for the selected team and player
 
                 studentSetup.classList.add('hidden');
                 startGame(true); // Start the game in single player mode
@@ -442,6 +446,11 @@
             const teamColors = ['team-1', 'team-2', 'team-3', 'team-4'];
 
             gameState.teams = []; // Clear existing teams
+            // NEW: Also clear availableTeamsForStudent when teacher sets new teams
+            gameState.availableTeamsForStudent = []; 
+            gameState.score = {}; // Clear existing scores
+            gameState.playerScores = {}; // Clear existing player scores
+
             for (let i = 0; i < count; i++) {
                 const teamName = `Đội ${i + 1}`;
                 const teamDiv = document.createElement('div');
@@ -456,6 +465,8 @@
                 gameState.teams.push({ name: teamName }); // Initialize team object without score here
                 gameState.score[teamName] = 0; // Initialize score for the team
                 gameState.playerScores[teamName] = {}; // Initialize playerScores for each team
+                // NEW: Add team name to availableTeamsForStudent for student selection
+                gameState.availableTeamsForStudent.push(teamName);
             }
 
             startGameBtn.classList.remove('hidden'); // Show the start game button after teams are set
@@ -471,6 +482,8 @@
                 gameState.teams = [];
                 gameState.score = {};
                 gameState.playerScores = {};
+                // NEW: Update availableTeamsForStudent based on teacher's final input
+                gameState.availableTeamsForStudent = [];
 
                 const teamInputs = teamNamesContainer.querySelectorAll('input[type="text"]');
                 teamInputs.forEach((input, index) => {
@@ -478,6 +491,7 @@
                     gameState.teams.push({ name: name });
                     gameState.score[name] = 0;
                     gameState.playerScores[name] = {};
+                    gameState.availableTeamsForStudent.push(name); // Ensure this is updated
                 });
 
                 // After teacher sets up, hide the setup and show game code (already visible)
