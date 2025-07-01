@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -249,16 +249,18 @@
     <script>
         // Game state and server connection (SIMPLIFIED FOR SINGLE PLAYER)
         const gameState = {
-            teams: [], // Will contain only one "team" for single player
+            teams: [], // Supports multiple teams
             currentTeamIndex: 0,
             isPlaying: false,
             timeLeft: 60,
             timerInterval: null,
             currentWord: '',
             currentIndex: 0,
-            score: {}, // Will track score for the single "team"
-            playerScores: {}, // NEW: { "TeamName": { "PlayerName": score } }
-            gameId: localStorage.getItem('gameId') || null, // Load from localStorage if exists
+            score: {},
+            playerScores: {},
+            activePlayers: new Set(), // Track active student connections
+            maxPlayers: 30, // Max concurrent students
+            gameId: localStorage.getItem('gameId') || null,
             words: [
                 "hello", "student", "teacher", "school", "friends",
                 "unity", "study", "hardworking", "happy", "family",
@@ -412,6 +414,12 @@
                 alert('Vui lòng nhập tên của bạn!');
                 return;
             }
+            
+            // Check player limit
+            if (gameState.activePlayers.size >= gameState.maxPlayers) {
+                alert('Phòng đã đầy! Tối đa 30 học sinh được tham gia cùng lúc.');
+                return;
+            }
             // NEW: Ensure gameCode matches the teacher's gameId
             if (!gameCode || gameCode !== gameState.gameId) {
                 alert('Mã trò chơi không hợp lệ hoặc chưa có game nào được tạo!');
@@ -436,6 +444,7 @@
                 gameState.score = { [selectedTeamName]: 0 }; // Initialize score for the selected team
                 gameState.playerScores = { [selectedTeamName]: { [name]: 0 } }; // Initialize playerScores for the selected team and player
 
+                gameState.activePlayers.add(name);
                 studentSetup.classList.add('hidden');
                 startGame(true); // Start the game in single player mode
             } else {
@@ -766,6 +775,7 @@
         // End the game
         function endGame() {
             gameState.isPlaying = false;
+            gameState.activePlayers.clear();
             clearInterval(gameState.timerInterval);
 
             // Hide game, show scoreboard
