@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -260,7 +260,7 @@
             playerScores: {},
             activePlayers: new Set(), // Track active student connections
             maxPlayers: 30, // Max concurrent students
-            gameId: localStorage.getItem('gameId') || null,
+            gameId: sessionStorage.getItem('gameId') || null,
             words: [
                 "hello", "student", "teacher", "school", "friends",
                 "unity", "study", "hardworking", "happy", "family",
@@ -326,8 +326,8 @@
             gameState.gameId = Math.random().toString(36).substring(2, 6).toUpperCase(); // Generate a unique game ID
             document.getElementById('gameCodeValue').textContent = gameState.gameId;
             // Save game data to localStorage
-            localStorage.setItem('gameId', gameState.gameId);
-            localStorage.setItem('availableTeams', JSON.stringify(gameState.availableTeamsForStudent));
+            sessionStorage.setItem('gameId', gameState.gameId);
+            sessionStorage.setItem('availableTeams', JSON.stringify(gameState.availableTeamsForStudent));
 
             // Clear student's previous choices
             gameState.lastStudentName = '';
@@ -369,11 +369,11 @@
         // Simulate getting available teams for student
         function getAvailableTeams() {
             const gameCode = studentGameCodeInput.value.trim().toUpperCase();
-            const savedGameId = localStorage.getItem('gameId');
+            const savedGameId = sessionStorage.getItem('gameId');
             
             if (gameCode && gameCode === savedGameId) {
                 // Try to get teams from localStorage first
-                const savedTeams = JSON.parse(localStorage.getItem('availableTeams'));
+                const savedTeams = JSON.parse(sessionStorage.getItem('availableTeams'));
                 if (savedTeams && savedTeams.length > 0) {
                     gameState.availableTeamsForStudent = savedTeams;
                 } else {
@@ -452,8 +452,25 @@
             }
         }
 
+        // Poll server for game updates
+        function pollGameUpdates() {
+            if (gameState.gameId) {
+                // In a real implementation, this would call your backend API
+                // For now we'll just use sessionStorage
+                const updatedTeams = JSON.parse(sessionStorage.getItem('availableTeams') || '[]');
+                if (JSON.stringify(updatedTeams) !== JSON.stringify(gameState.availableTeamsForStudent)) {
+                    gameState.availableTeamsForStudent = updatedTeams;
+                    if (studentTeamSelect) {
+                        populateStudentTeamSelect();
+                    }
+                }
+            }
+            setTimeout(pollGameUpdates, 2000); // Poll every 2 seconds
+        }
+
         // Initialize the game (simplified)
         function init() {
+            pollGameUpdates();
             // Generate keyboard
             generateKeyboard();
 
@@ -493,7 +510,7 @@
                 // Always update availableTeamsForStudent to match current teams
                 gameState.availableTeamsForStudent = gameState.teams.map(t => t.name);
                 // Save to localStorage
-                localStorage.setItem('availableTeams', JSON.stringify(gameState.availableTeamsForStudent));
+                sessionStorage.setItem('availableTeams', JSON.stringify(gameState.availableTeamsForStudent));
             }
 
             startGameBtn.classList.remove('hidden'); // Show the start game button after teams are set
